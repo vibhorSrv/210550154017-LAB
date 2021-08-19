@@ -49,6 +49,7 @@ static int MY_MODULE_init(void)
     }
 
     rwstats = (struct stats *)kmalloc(sizeof(struct stats), GFP_KERNEL);
+    rwstats->buff = (char *)kmalloc(sizeof(char) * 100, GFP_KERNEL);
 
     PRINT("My Module init end");
     return 0;
@@ -61,7 +62,7 @@ static void MY_MODULE_exit(void)
     unregister_chrdev_region(dev, 1);
 
     cdev_del(mycdev);
-
+    kfree(rwstats->buff);
     kfree(rwstats);
 
     PRINT("Unregisterd device with MAJ=%d,MIN=%d", MAJOR(dev), MINOR(dev))
@@ -94,7 +95,7 @@ ssize_t CHAR_DEV_read(struct file *__file, char *__ubuff, size_t __nbytes, loff_
     {
         PRINT("Copied %d bytes to user space", numtoread);
         //updating the rw stats
-        rwstats->buff = *kbuff;
+        memcpy((char *)rwstats->buff, (char *)kbuff, numtoread);
         rwstats->size = numtoread;
         rwstats->r_w = 0;
 
@@ -117,10 +118,10 @@ ssize_t CHAR_DEV_write(struct file *__file, const char *__ubuff, size_t __nbytes
     {
         PRINT("Copied %d bytes from user space to kernel space", numtowrite);
         //updating the rw stats
-        rwstats->buff = *kbuff;
+        memcpy((char *)rwstats->buff, (char *)kbuff, numtowrite);
         rwstats->size = numtowrite;
         rwstats->r_w = 1;
-
+        PRINT("rwstatus->buff= %s", rwstats->buff);
         return numtowrite;
     }
     PRINT("Inside CHAR_DEV_write() end")
@@ -130,12 +131,21 @@ ssize_t CHAR_DEV_write(struct file *__file, const char *__ubuff, size_t __nbytes
 
 long CHAR_DEV_ioctl(struct file *__file, unsigned int cmd, unsigned long arg)
 {
+    struct stats *u_rwstat;
+
     PRINT("Inside CHAR_DEV_ioctl() start")
 
     switch (cmd)
     {
     case GETSTATS:
-        return copy_to_user((struct stats *)arg, rwstats, sizeof(struct stats));
+        u_rwstat = (struct stats *)arg;
+        if (copy_to_user(&(u_rwstat->size), &(rwstats->size), sizeof(int)))
+            return -EFAULT;
+        if (copy_to_user(u_rwstat->buff, rwstats->buff, rwstats->size))
+            return -EFAULT;
+        if (copy_to_user(&(u_rwstat->r_w), &(rwstats->r_w), sizeof(int)))
+            return -EFAULT;
+        return 0;
     default:
         PRINT("IOCTL Operation Not Supported!");
     }

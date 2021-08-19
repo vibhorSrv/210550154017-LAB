@@ -23,6 +23,7 @@ int main(int argc, char const *argv[])
     else
     {
         rwstat = (struct stats *)malloc(sizeof(struct stats));
+        rwstat->buff = (char *)malloc(sizeof(char) * 100);
         res = ioctl(fd, GETSTATS, rwstat);
         if (res >= 0)
         {
@@ -35,6 +36,8 @@ int main(int argc, char const *argv[])
             printf("IOCTL operation failed");
         }
     }
+    free(rwstat->buff);
+    free(rwstat);
     close(fd);
     return 0;
 }

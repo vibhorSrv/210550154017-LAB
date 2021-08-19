@@ -23,7 +23,7 @@ int main(int argc, char const *argv[])
     else
     {
         res = write(fd, argv[1], strlen(argv[1]));
-        printf("Written %d bytes to the kernel buffer", res);
+        printf("Written %d bytes to the kernel buffer\n", res);
     }
     close(fd);
     return 0;
