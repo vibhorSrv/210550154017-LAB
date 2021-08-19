@@ -1,0 +1,7 @@
+{
+    "files.associations": {
+        "my_driver.h": "c",
+        "stdlib.h": "c",
+        "my_ioct.h": "c"
+    }
+}
